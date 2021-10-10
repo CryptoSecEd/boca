@@ -1,0 +1,11 @@
+*.pyc
+*.log
+*.key
+*.enc
+*.dec
+*.zip
+.DS_Store
+__pycache__
+config.py
+provider/
+investigator/
