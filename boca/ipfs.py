@@ -7,11 +7,14 @@ import zipfile
 
 from hashlib import sha256
 from pathlib import Path
+from requests import post, get
+from requests.exceptions import ConnectTimeout
 
 from ipfshttpclient import connect
 from ipfshttpclient.exceptions import ConnectionError as IPFSConnectionError
 
-IPFS_GATEWAY = '/ip4/127.0.0.1/tcp/5001/http'
+IPFS_GATEWAY = "/ip4/127.0.0.1/tcp/5001/http"
+IPFS_URL = "https://ipfs.io/ipfs/"
 DEFAULT_TIMEOUT = 30
 
 
@@ -84,15 +87,31 @@ def download_from_ipfs(cid, target=Path.cwd()):
     :type target: ``pathlib.Path``
     :rtype: ``int``
     """
+    from boca.config import INFURA_IPFS_URL, INFURA_IPFS_AUTH
 
     download_location = Path(target, cid)
     try:
         client = connect(IPFS_GATEWAY)
+        client.get(cid, target, timeout=DEFAULT_TIMEOUT)
     except IPFSConnectionError:
-        print("Cannot reach gateway. Please make sure local IPFS daemon is " +
-              "running:")
-        sys.exit(1)
-    client.get(cid, target, timeout=DEFAULT_TIMEOUT)
+        print("Cannot reach local IPFS gateway. Attempting Infura IPFS API.")
+        try:
+            params = (('arg',cid),)
+            response = get(IPFS_URL + str(cid))
+
+            totalbits = 0
+            if response.status_code == 200:
+                with open(download_location, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=1024):
+                        if chunk:
+                            totalbits += 1024
+                            print(len(chunk))
+                            print("Downloaded",totalbits/1024,"KB...")
+                            f.write(chunk)            
+        except ConnectTimeout:
+            print("Unable to connect to Infura IPFS API. Exiting.")
+            sys.exit(1)
+
     if download_location.is_dir():
         print("Downloaded folder from IPFS: %s" % cid)
     elif download_location.is_file():
@@ -225,14 +244,21 @@ def upload_to_ipfs(filename):
     :returns: Dictionary containing IPFS CID and other details.
     :rtype: ``dict``
     """
+
+    from boca.config import INFURA_IPFS_URL, INFURA_IPFS_AUTH
+
     try:
         client = connect(IPFS_GATEWAY)
+        res = client.add(filename, recursive=True, timeout=DEFAULT_TIMEOUT)
     except IPFSConnectionError:
-        print("Cannot reach gateway. Please make sure local IPFS daemon is " +
-              "running:")
-        # print(e.args[0])
-        sys.exit(1)
-    res = client.add(filename, recursive=True, timeout=DEFAULT_TIMEOUT)
+        print("Cannot reach local IPFS gateway. Attempting Infura IPFS API.")
+        try:
+            files = {'file': (open(filename,'rb')),}
+            res = post(INFURA_IPFS_URL, files=files, auth=INFURA_IPFS_AUTH, 
+                       timeout=10).json()
+        except ConnectTimeout:
+            print("Unable to connect to Infura IPFS API. Exiting.")
+            sys.exit(1)
     return res
 
 
