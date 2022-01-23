@@ -600,8 +600,6 @@ def get_boc_hash_eth(transaction, filehash, chain, getcid):
             if len(split_post) == 3:
                 output['ipfs_hash'] = split_post[2]
                 output['source_address'] = transaction['from']
-                print("In get_boc_hash_eth() 1")
-                print(output)
                 return output
             # If getcid is used, we ignore any transactions that don't
             # have a third argument
