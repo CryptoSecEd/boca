@@ -411,9 +411,9 @@ def get_balance_local(address, chain):
     :rtype: ``float''
     """
     if chain == "tBCH":
-        endpoint = 'https://testnet3.fullstack.cash/v4/electrumx/balance/{}'
+        endpoint = 'https://testnet3.fullstack.cash/v5/electrumx/balance/{}'
     elif chain == "BCH":
-        endpoint = 'https://api.fullstack.cash/v4/electrumx/balance/{}'
+        endpoint = 'https://api.fullstack.cash/v5/electrumx/balance/{}'
     else:
         raise ValueError("Invalid input in get_balance_local: " + chain)
 
@@ -671,9 +671,9 @@ def get_raw_transaction(txid, chain):
     :rtype: ``dict``
     """
     if chain == "tBCH":
-        endpoint = 'https://testnet3.fullstack.cash/v4/electrumx/tx/data/{}'
+        endpoint = 'https://testnet3.fullstack.cash/v5/electrumx/tx/data/{}'
     elif chain == "BCH":
-        endpoint = 'https://api.fullstack.cash/v4/electrumx/tx/data/{}'
+        endpoint = 'https://api.fullstack.cash/v5/electrumx/tx/data/{}'
     else:
         raise ValueError("Invalid input in get_raw_transaction(): " + chain)
 
@@ -730,9 +730,9 @@ def get_transactions_local(address, chain):
     """
 
     if chain == "tBCH":
-        endpoint = 'https://testnet3.fullstack.cash/v4/electrumx/'
+        endpoint = 'https://testnet3.fullstack.cash/v5/electrumx/'
     elif chain == "BCH":
-        endpoint = 'https://api.fullstack.cash/v4/electrumx/'
+        endpoint = 'https://api.fullstack.cash/v5/electrumx/'
     else:
         raise ValueError("Invalid input in get_transactions_local(): " + chain)
 
@@ -773,9 +773,9 @@ def get_unspent_local(address, chain):
     if ":" in address:
         address = address.split(":")[1]
     if chain == "BCH":
-        api = "https://api.fullstack.cash/v4/electrumx/utxos/{}"
+        api = "https://api.fullstack.cash/v5/electrumx/utxos/{}"
     elif chain == "tBCH":
-        api = "https://testnet3.fullstack.cash/v4/electrumx/utxos/{}"
+        api = "https://testnet3.fullstack.cash/v5/electrumx/utxos/{}"
     else:
         raise ValueError("Invalid input in get_unspent_local(): " + chain)
     request = requests.get(api.format(address), timeout=DEFAULT_TIMEOUT)
