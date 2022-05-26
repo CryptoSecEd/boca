@@ -38,7 +38,7 @@ BCH_OP_RETURN_LIMIT = 220
 DEFAULT_TIMEOUT = 30
 DEBUG = False
 FULLSTACK_LIMIT = 20
-ETH_TESTNET_GAS_PRICE = '5'
+ETH_TESTNET_GAS_PRICE = '20000'
 ETHERSCAN_URL_MAINNET = "https://api.etherscan.io"
 ETHERSCAN_URL_TESTNET = "https://api-ropsten.etherscan.io"
 
@@ -1167,14 +1167,14 @@ def send_memo_eth(key, message):
     txn_dict = {
             'to': key.address,
             'value': 0,
-            'gasPrice': w3main.eth.generateGasPrice(),
+            'gasPrice': w3main.eth.generate_gas_price(),
             'nonce': w3main.eth.getTransactionCount(key.address),
             'chainId': 1,
             'data': message.encode('utf-8')
     }
     print("Suitable gasPrice determined: %.2f Gwei"
           % w3main.fromWei(txn_dict['gasPrice'], 'gwei'))
-    txn_dict['gas'] = w3main.eth.estimateGas(txn_dict)
+    txn_dict['gas'] = w3main.eth.estimate_gas(txn_dict)
     signed_txn = w3main.eth.account.signTransaction(txn_dict, key.key)
     txn_hash = w3main.eth.sendRawTransaction(signed_txn.rawTransaction)
     txn_receipt = None
@@ -1215,7 +1215,7 @@ def send_memo_testnet_eth(key, message):
             'chainId': 3,
             'data': message.encode('utf-8')
     }
-    txn_dict['gas'] = w3test.eth.estimateGas(txn_dict)
+    txn_dict['gas'] = w3test.eth.estimate_gas(txn_dict)
     signed_txn = w3test.eth.account.signTransaction(txn_dict, key.key)
 
     txn_hash = w3test.eth.sendRawTransaction(signed_txn.rawTransaction)
@@ -1256,14 +1256,14 @@ def spend_eth(key, address, amount):
     txn_dict = {
             'to': address,
             'value': w3main.toWei(amount, 'ether'),
-            'gasPrice': w3main.eth.generateGasPrice(),
+            'gasPrice': w3main.eth.generate_gas_price(),
             'nonce': w3main.eth.getTransactionCount(key.address),
             'chainId': 1,
     }
     print("Suitable gasPrice determined: %.2f Gwei"
           % w3main.fromWei(txn_dict['gasPrice'], 'gwei'))
     try:
-        txn_dict['gas'] = w3main.eth.estimateGas(txn_dict)
+        txn_dict['gas'] = w3main.eth.estimate_gas(txn_dict)
         signed_txn = w3main.eth.account.signTransaction(txn_dict, key.key)
         txn_hash = w3main.eth.sendRawTransaction(signed_txn.rawTransaction)
     except ValueError as exc:
@@ -1322,7 +1322,7 @@ def spend_testnet_eth(key, address, amount):
             'nonce': w3test.eth.getTransactionCount(key.address),
             'chainId': 3,
     }
-    txn_dict['gas'] = w3test.eth.estimateGas(txn_dict)
+    txn_dict['gas'] = w3test.eth.estimate_gas(txn_dict)
     signed_txn = w3test.eth.account.signTransaction(txn_dict, key.key)
     try:
         txn_hash = w3test.eth.sendRawTransaction(signed_txn.rawTransaction)
