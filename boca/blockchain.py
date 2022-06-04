@@ -38,7 +38,6 @@ BCH_OP_RETURN_LIMIT = 220
 DEFAULT_TIMEOUT = 30
 DEBUG = False
 FULLSTACK_LIMIT = 20
-ETH_TESTNET_GAS_PRICE = '20'
 ETHERSCAN_URL_MAINNET = "https://api.etherscan.io"
 ETHERSCAN_URL_TESTNET = "https://api-ropsten.etherscan.io"
 
@@ -1207,10 +1206,11 @@ def send_memo_testnet_eth(key, message):
     """
     from boca.config import INFURA_URL_MAINNET, INFURA_URL_TESTNET
     w3test = Web3(Web3.HTTPProvider(INFURA_URL_TESTNET))
+    w3test.eth.setGasPriceStrategy(slow_gas_price_strategy)
     txn_dict = {
             'to': key.address,
             'value': 0,
-            'gasPrice': w3test.toWei(ETH_TESTNET_GAS_PRICE, 'gwei'),
+            'gasPrice': w3test.eth.generate_gas_price(),
             'nonce': w3test.eth.getTransactionCount(key.address),
             'chainId': 3,
             'data': message.encode('utf-8')
@@ -1315,10 +1315,11 @@ def spend_testnet_eth(key, address, amount):
     from boca.config import INFURA_URL_MAINNET, INFURA_URL_TESTNET
     print("Trying to make testnet ETH transfer")
     w3test = Web3(Web3.HTTPProvider(INFURA_URL_TESTNET))
+    w3test.eth.setGasPriceStrategy(slow_gas_price_strategy)
     txn_dict = {
             'to': address,
             'value': w3test.toWei(amount, 'ether'),
-            'gasPrice': w3test.toWei(ETH_TESTNET_GAS_PRICE, 'gwei'),
+            'gasPrice': w3test.eth.generate_gas_price(),
             'nonce': w3test.eth.getTransactionCount(key.address),
             'chainId': 3,
     }
@@ -1330,7 +1331,7 @@ def spend_testnet_eth(key, address, amount):
         # Strictly speaking, the gas is in gwei and I want it in ether,
         # but wei to gwei is the same conversion rate
         fee = (w3test.fromWei(txn_dict['gas'], 'gwei')
-               * Decimal(ETH_TESTNET_GAS_PRICE))
+               * txn_dict['gasPrice'])
         total_cost = fee + Decimal(amount)
         print(f"Fee:                   {fee:.9f}")
         print(f"Needed balance:        {total_cost:.9f}")
