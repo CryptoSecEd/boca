@@ -109,9 +109,9 @@ def main():
             try:
                 ver = bch_get_version(current_address)
                 if (ver == "main" and args.chain != "BCH"):
-                    print("Incorrect network: " % ver)
+                    print(f"Incorrect network: {ver}")
                 elif (ver == "test" and args.chain != "tBCH"):
-                    print("Incorrect network: " % ver)
+                    print(f"Incorrect network: {ver}")
             except ValueError as val_e:
                 print("%s is not a valid BCH mainnet/testnet address - %s" %
                       (current_address, val_e.args[0]))
