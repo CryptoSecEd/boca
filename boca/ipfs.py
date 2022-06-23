@@ -34,7 +34,7 @@ def check_index(index_file):
     """
 
     index_path = Path(index_file).parents[0]
-    with open(index_file, 'r') as file_index:
+    with open(index_file, 'r', encoding="utf-8") as file_index:
         start_of_files = False
         index_files = set()
         index_count = 0
@@ -87,8 +87,6 @@ def download_from_ipfs(cid, target=Path.cwd()):
     :type target: ``pathlib.Path``
     :rtype: ``int``
     """
-    from boca.config import INFURA_IPFS_URL, INFURA_IPFS_AUTH
-
     download_location = Path(target, cid)
     try:
         client = connect(IPFS_GATEWAY)
@@ -96,18 +94,17 @@ def download_from_ipfs(cid, target=Path.cwd()):
     except IPFSConnectionError:
         print("Cannot reach local IPFS gateway. Attempting Infura IPFS API.")
         try:
-            params = (('arg',cid),)
             response = get(IPFS_URL + str(cid))
 
             totalbits = 0
             if response.status_code == 200:
-                with open(download_location, 'wb') as f:
+                with open(download_location, 'wb') as file_w:
                     for chunk in response.iter_content(chunk_size=1024):
                         if chunk:
                             totalbits += 1024
                             print(len(chunk))
-                            print("Downloaded",totalbits/1024,"KB...")
-                            f.write(chunk)            
+                            print("Downloaded", totalbits/1024, "KB...")
+                            file_w.write(chunk)
         except ConnectTimeout:
             print("Unable to connect to Infura IPFS API. Exiting.")
             sys.exit(1)
@@ -169,7 +166,7 @@ def parse_image_file(filename):
             re.compile(r'[^0-9a-f][0-9a-f]{'+str(h_l)+','+str(h_l)+'}$'),
             re.compile(r'[^0-9a-f][0-9a-f]{'+str(h_l)+','+str(h_l)+'}[^0-9a-f]')])
     try:
-        with open(filename, "r") as file_in:
+        with open(filename, "r", encoding="utf-8") as file_in:
             lines = file_in.readlines()
             for line in lines:
                 line = line.rstrip()
@@ -253,8 +250,8 @@ def upload_to_ipfs(filename):
     except IPFSConnectionError:
         print("Cannot reach local IPFS gateway. Attempting Infura IPFS API.")
         try:
-            files = {'file': (open(filename,'rb')),}
-            res = post(INFURA_IPFS_URL, files=files, auth=INFURA_IPFS_AUTH, 
+            files = {'file': (open(filename, 'rb')), }
+            res = post(INFURA_IPFS_URL, files=files, auth=INFURA_IPFS_AUTH,
                        timeout=10).json()
         except ConnectTimeout:
             print("Unable to connect to Infura IPFS API. Exiting.")

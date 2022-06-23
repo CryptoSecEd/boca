@@ -123,7 +123,7 @@ def main():
                 print("Invalid input")
                 sys.exit(1)
         if not index_path.is_file():
-            with open(index_path, 'x') as file_index:
+            with open(index_path, 'x', encoding="utf-8") as file_index:
                 print("Please enter the following details: ")
                 name = input("Name: ")
                 description = input("Description of data: ")
@@ -225,7 +225,11 @@ def main():
                 string_to_post = string_to_post + " " + res['Hash']
 
     transaction_details = send_memo(key, string_to_post, args.chain)
-    print("Transaction id: %s" % transaction_details['txid'])
+    if transaction_details['status'] == 'failed':
+        print("Unable to complete transaction.")
+        print(f"Reason: {repr(transaction_details['error'])}")
+    else:
+        print("Transaction id: %s" % transaction_details['txid'])
 
 
 if __name__ == "__main__":

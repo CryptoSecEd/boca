@@ -26,13 +26,10 @@ from bitcash.wallet import PrivateKeyTestnet, PrivateKey
 from ipfshttpclient.exceptions import TimeoutError as IPFSTimeoutError
 from web3 import Web3
 from web3.exceptions import TransactionNotFound
-from web3.gas_strategies.time_based import slow_gas_price_strategy
 
 import requests
 import boca
 
-def test():
-    print(boca.ipfs.hash_file("test.txt"))
 
 BCH_OP_RETURN_LIMIT = 220
 DEFAULT_TIMEOUT = 30
@@ -40,6 +37,8 @@ DEBUG = False
 FULLSTACK_LIMIT = 20
 ETHERSCAN_URL_MAINNET = "https://api.etherscan.io"
 ETHERSCAN_URL_TESTNET = "https://api-ropsten.etherscan.io"
+MAX_PRIORITY_FEE_PER_GAS_TEST = 1000000000
+MAX_PRIORITY_FEE_PER_GAS_MAIN = 1000000000
 
 
 class BOCError(Exception):
@@ -540,7 +539,7 @@ def get_boc_hash_eth(transaction, filehash, chain, getcid):
     confirmations.
     :rtype: ``dict``
     """
-    from boca.config import INFURA_URL_MAINNET, INFURA_URL_TESTNET
+    from boca.config import INFURA_URL_MAINNET
 
     if chain == 'ETH':
         output = {}
@@ -611,8 +610,7 @@ def get_boc_hash_eth(transaction, filehash, chain, getcid):
                 output['time'] = w3test.eth\
                     .getBlock(transaction['blockNumber'])['timestamp']
                 return output
-            else:
-                raise BOCError
+            raise BOCError
         if header == "bocd":
             # These types of posts are not yet supported
             pass
@@ -1159,23 +1157,40 @@ def send_memo_eth(key, message):
     :returns: Dictionary with tx status, ID, and receipt
     :rtype: ``dict``
     """
-    from boca.config import INFURA_URL_MAINNET, INFURA_URL_TESTNET
+
+    from boca.config import INFURA_URL_MAINNET
+    print("Trying to make ETH transfer")
     w3main = Web3(Web3.HTTPProvider(INFURA_URL_MAINNET))
-    w3main.eth.setGasPriceStrategy(slow_gas_price_strategy)
-    print("Determining suitable gasPrice (may take some time)")
+
+    historic_fees = w3main.eth.fee_history(1, 'latest')
+    base_fee_per_gas = historic_fees['baseFeePerGas'][0]
     txn_dict = {
             'to': key.address,
             'value': 0,
-            'gasPrice': w3main.eth.generate_gas_price(),
+            'maxPriorityFeePerGas': MAX_PRIORITY_FEE_PER_GAS_MAIN,
+            'maxFeePerGas': base_fee_per_gas + MAX_PRIORITY_FEE_PER_GAS_MAIN,
             'nonce': w3main.eth.getTransactionCount(key.address),
             'chainId': 1,
             'data': message.encode('utf-8')
     }
-    print("Suitable gasPrice determined: %.2f Gwei"
-          % w3main.fromWei(txn_dict['gasPrice'], 'gwei'))
     txn_dict['gas'] = w3main.eth.estimate_gas(txn_dict)
-    signed_txn = w3main.eth.account.signTransaction(txn_dict, key.key)
-    txn_hash = w3main.eth.sendRawTransaction(signed_txn.rawTransaction)
+    signed_txn = w3main.eth.account.sign_transaction(txn_dict, key.key)
+    try:
+        txn_hash = w3main.eth.send_raw_transaction(signed_txn.rawTransaction)
+    except ValueError as exc:
+        print("Transaction failed!")
+        balance_test_w = w3main.eth.getBalance(key.address)
+        balance_test = w3main.fromWei(balance_test_w, 'gwei')
+        print(f"ETH Balance:          {balance_test:.9f} Gwei")
+        fee_w = txn_dict['gas'] * txn_dict['maxFeePerGas']
+        total_cost_w = txn_dict['value'] + fee_w
+        total_cost = w3main.fromWei(total_cost_w, 'gwei')
+        print(f"Required balance:     {total_cost:.9f} Gwei")
+        print(f"Try reduce amount by: {total_cost - balance_test:.9f} Gwei")
+        print("Or increase funds in wallet.")
+        return({'status': 'failed', 'error': exc,
+                'txn_dict': txn_dict})
+
     txn_receipt = None
     count = 0
     pause = 10
@@ -1204,21 +1219,39 @@ def send_memo_testnet_eth(key, message):
     :returns: Dictionary with tx status, ID, and receipt
     :rtype: ``dict``
     """
-    from boca.config import INFURA_URL_MAINNET, INFURA_URL_TESTNET
+
+    from boca.config import INFURA_URL_TESTNET
+    print("Trying to make testnet ETH transfer")
     w3test = Web3(Web3.HTTPProvider(INFURA_URL_TESTNET))
-    w3test.eth.setGasPriceStrategy(slow_gas_price_strategy)
+    historic_fees = w3test.eth.fee_history(1, 'latest')
+    base_fee_per_gas = historic_fees['baseFeePerGas'][0]
     txn_dict = {
             'to': key.address,
             'value': 0,
-            'gasPrice': w3test.eth.generate_gas_price(),
+            'maxPriorityFeePerGas': MAX_PRIORITY_FEE_PER_GAS_TEST,
+            'maxFeePerGas': base_fee_per_gas + MAX_PRIORITY_FEE_PER_GAS_TEST,
             'nonce': w3test.eth.getTransactionCount(key.address),
             'chainId': 3,
-            'data': message.encode('utf-8')
+            'data': message.encode('utf-8'),
     }
     txn_dict['gas'] = w3test.eth.estimate_gas(txn_dict)
-    signed_txn = w3test.eth.account.signTransaction(txn_dict, key.key)
+    signed_txn = w3test.eth.account.sign_transaction(txn_dict, key.key)
+    try:
+        txn_hash = w3test.eth.send_raw_transaction(signed_txn.rawTransaction)
+    except ValueError as exc:
+        print("Transaction failed!")
+        balance_test_w = w3test.eth.getBalance(key.address)
+        balance_test = w3test.fromWei(balance_test_w, 'gwei')
+        print(f"(testnet) ETH Balance: {balance_test:.9f} Gwei")
+        fee_w = txn_dict['gas'] * txn_dict['maxFeePerGas']
+        total_cost_w = txn_dict['value'] + fee_w
+        total_cost = w3test.fromWei(total_cost_w, 'gwei')
+        print(f"Required balance:      {total_cost:.9f} Gwei")
+        print(f"Try reduce amount by:  {total_cost - balance_test:.9f} Gwei")
+        print("Or increase funds in wallet.")
+        return({'status': 'failed', 'error': exc,
+                'txn_dict': txn_dict})
 
-    txn_hash = w3test.eth.sendRawTransaction(signed_txn.rawTransaction)
     txn_receipt = None
     count = 0
     pause = 10
@@ -1248,41 +1281,38 @@ def spend_eth(key, address, amount):
     :returns: Transaction details
     :rtype: ``dict``
     """
-    from boca.config import INFURA_URL_MAINNET, INFURA_URL_TESTNET
+    from boca.config import INFURA_URL_MAINNET
     print("Trying to make ETH transfer")
     w3main = Web3(Web3.HTTPProvider(INFURA_URL_MAINNET))
-    w3main.eth.setGasPriceStrategy(slow_gas_price_strategy)
-    print("Determining suitable gasPrice (may take some time)")
+
+    historic_fees = w3main.eth.fee_history(1, 'latest')
+    base_fee_per_gas = historic_fees['baseFeePerGas'][0]
     txn_dict = {
             'to': address,
             'value': w3main.toWei(amount, 'ether'),
-            'gasPrice': w3main.eth.generate_gas_price(),
+            'maxPriorityFeePerGas': MAX_PRIORITY_FEE_PER_GAS_MAIN,
+            'maxFeePerGas': base_fee_per_gas + MAX_PRIORITY_FEE_PER_GAS_MAIN,
             'nonce': w3main.eth.getTransactionCount(key.address),
             'chainId': 1,
     }
-    print("Suitable gasPrice determined: %.2f Gwei"
-          % w3main.fromWei(txn_dict['gasPrice'], 'gwei'))
+    txn_dict['gas'] = w3main.eth.estimate_gas(txn_dict)
+    signed_txn = w3main.eth.account.sign_transaction(txn_dict, key.key)
     try:
-        txn_dict['gas'] = w3main.eth.estimate_gas(txn_dict)
-        signed_txn = w3main.eth.account.signTransaction(txn_dict, key.key)
-        txn_hash = w3main.eth.sendRawTransaction(signed_txn.rawTransaction)
+        txn_hash = w3main.eth.send_raw_transaction(signed_txn.rawTransaction)
     except ValueError as exc:
-        # The API will only calculate gas if there is enough Eth in the
-        # wallet, which means I can't work out the difference.
-        if 'gas' not in txn_dict:
-            print("Unable to estimate Gas cost:")
-            print(txn_dict)
-            return({'status': 'failed', 'error': repr(exc)})
-        # Strictly speaking, the gas is in gwei and I want it in ether,
-        # but wei to gwei is the same conversion rate
-        total_cost = (w3main.fromWei(txn_dict['gas'], 'gwei') *
-                      w3main.fromWei(txn_dict['gasPrice'], 'gwei') +
-                      Decimal(amount))
-        print("Needed balance: %.9f eth" % total_cost)
-        balance = w3main.eth.getBalance(key.address)
-        print("ETH Balance:    %.9f eth"
-              % w3main.fromWei(balance, 'ether'))
-        return({'status': 'failed', 'error': repr(exc)})
+        print("Transaction failed!")
+        balance_test_w = w3main.eth.getBalance(key.address)
+        balance_test = w3main.fromWei(balance_test_w, 'gwei')
+        print(f"ETH Balance:          {balance_test:.9f} Gwei")
+        fee_w = txn_dict['gas'] * txn_dict['maxFeePerGas']
+        total_cost_w = txn_dict['value'] + fee_w
+        total_cost = w3main.fromWei(total_cost_w, 'gwei')
+        print(f"Required balance:     {total_cost:.9f} Gwei")
+        print(f"Try reduce amount by: {total_cost - balance_test:.9f} Gwei")
+        print("Or increase funds in wallet.")
+        return({'status': 'failed', 'error': exc,
+                'txn_dict': txn_dict})
+
     txn_receipt = None
     count = 0
     pause = 10
@@ -1312,33 +1342,35 @@ def spend_testnet_eth(key, address, amount):
     :returns: Transaction details
     :rtype: ``dict``
     """
-    from boca.config import INFURA_URL_MAINNET, INFURA_URL_TESTNET
+    from boca.config import INFURA_URL_TESTNET
     print("Trying to make testnet ETH transfer")
     w3test = Web3(Web3.HTTPProvider(INFURA_URL_TESTNET))
-    w3test.eth.setGasPriceStrategy(slow_gas_price_strategy)
+    historic_fees = w3test.eth.fee_history(1, 'latest')
+    base_fee_per_gas = historic_fees['baseFeePerGas'][0]
     txn_dict = {
             'to': address,
             'value': w3test.toWei(amount, 'ether'),
-            'gasPrice': w3test.eth.generate_gas_price(),
+            'maxPriorityFeePerGas': MAX_PRIORITY_FEE_PER_GAS_TEST,
+            'maxFeePerGas': base_fee_per_gas + MAX_PRIORITY_FEE_PER_GAS_TEST,
             'nonce': w3test.eth.getTransactionCount(key.address),
             'chainId': 3,
     }
     txn_dict['gas'] = w3test.eth.estimate_gas(txn_dict)
-    signed_txn = w3test.eth.account.signTransaction(txn_dict, key.key)
+    signed_txn = w3test.eth.account.sign_transaction(txn_dict, key.key)
     try:
-        txn_hash = w3test.eth.sendRawTransaction(signed_txn.rawTransaction)
+        txn_hash = w3test.eth.send_raw_transaction(signed_txn.rawTransaction)
     except ValueError as exc:
-        # Strictly speaking, the gas is in gwei and I want it in ether,
-        # but wei to gwei is the same conversion rate
-        fee = (w3test.fromWei(txn_dict['gas'], 'gwei')
-               * txn_dict['gasPrice'])
-        total_cost = fee + Decimal(amount)
-        print(f"Fee:                   {fee:.9f}")
-        print(f"Needed balance:        {total_cost:.9f}")
-        balance_test = w3test.eth.getBalance(key.address)
-        print("(testnet) ETH Balance: " +
-              f"{w3test.fromWei(balance_test, 'ether'):.9f} eth")
-        return({'status': 'failed', 'error': repr(exc),
+        print("Transaction failed!")
+        balance_test_w = w3test.eth.getBalance(key.address)
+        balance_test = w3test.fromWei(balance_test_w, 'gwei')
+        print(f"(testnet) ETH Balance: {balance_test:.9f} Gwei")
+        fee_w = txn_dict['gas'] * txn_dict['maxFeePerGas']
+        total_cost_w = txn_dict['value'] + fee_w
+        total_cost = w3test.fromWei(total_cost_w, 'gwei')
+        print(f"Required balance:      {total_cost:.9f} Gwei")
+        print(f"Try reduce amount by: {total_cost - balance_test:.9f} Gwei")
+        print("Or increase funds in wallet.")
+        return({'status': 'failed', 'error': exc,
                 'txn_dict': txn_dict})
     txn_receipt = None
     count = 0

@@ -31,7 +31,7 @@ def print_to_log(message, log_file):
     :type log_file: ``Path``
     """
 
-    with open(log_file, "a") as file_handle:
+    with open(log_file, "a", encoding="utf-8") as file_handle:
         message.rstrip()
         file_handle.write(message+"\n")
     return 0
@@ -62,7 +62,7 @@ def main():
     elif args.chain == "tBCH":
         print("Attempting to verify post to (testnet) BCH blockchain")
         key = keys["tBCH"]
-    elif (args.chain == "ETH" or args.chain == "tETH"):
+    elif args.chain in ("ETH", "tETH"):
         print("Scanning is not yet supported on the ETH/tETH blockchain")
         sys.exit(0)
     else:
@@ -80,12 +80,12 @@ def main():
     seen_transactions = set()
 
     if log_verified.is_file():
-        with open(log_verified, "r") as log_file:
+        with open(log_verified, "r", encoding="utf-8") as log_file:
             for line in log_file:
                 seen_transactions.add(line.split(',')[0])
 
     if log_error.is_file():
-        with open(log_error, "r") as log_file:
+        with open(log_error, "r", encoding="utf-8") as log_file:
             for line in log_file:
                 seen_transactions.add(line.split(',')[0])
 

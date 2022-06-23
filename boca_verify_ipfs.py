@@ -273,7 +273,7 @@ def main():
     # If no ID is provided, load the private key, get the address, and look
     # for any mutual exchanges.
     elif args.address:
-        if (args.chain == 'BCH' or args.chain == 'tBCH'):
+        if (args.chain in ('BCH', 'tBCH')):
             try:
                 provider_address = to_cash_address(args.address)
             except InvalidAddress:

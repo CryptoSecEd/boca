@@ -113,7 +113,8 @@ def main():
         key = keys['ETH']
         tx_ = spend_eth(key, args.address, args.amount)
         if tx_['status'] == 'failed':
-            print("Unable to complete transaction. Reason: %s" % tx_['error'])
+            print("Unable to complete transaction.")
+            print(f"Reason: {repr(tx_['error'])}")
         else:
             print("Transaction ID: %s" % tx_['txid'])
 
@@ -125,8 +126,8 @@ def main():
         key = keys['ETH']
         tx_ = spend_testnet_eth(key, args.address, args.amount)
         if tx_['status'] == 'failed':
-            print("Unable to complete transaction. Reason: %s" % tx_['error'])
-            print(tx_)
+            print("Unable to complete transaction.")
+            print(f"Reason: {repr(tx_['error'])}")
         else:
             print("Transaction ID: %s" % tx_['txid'])
 

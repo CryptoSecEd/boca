@@ -64,9 +64,9 @@ def dec_file(key, filename, chain):
             print("Deleting file.")
             dec_filename.unlink()
         else:
-            raise DecryptionError("File named %s already exists. Please " +
-                                  "move/delete before attempting to decrypt."
-                                  % str(dec_filename))
+            raise DecryptionError(f"File named {str(dec_filename)} already " +
+                                  "exists. Please move/delete before " +
+                                  "attempting to decrypt.")
     with open(filename, 'rb') as file_in:
         header = file_in.read(len(BOCA_IDENTIFIER) + 1)
 
