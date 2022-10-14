@@ -143,6 +143,10 @@ def main():
                     file_to_verify = decrypted_file
         except zipfile.BadZipFile:
             file_to_verify = decrypted_file
+        except FileExistsError:
+            print("Unable to proceed. Please move/delete files/folders in" +
+                  f" the zip file {str(decrypted_file)}")
+            sys.exit(1)
 
     # When using 'getcid' these values are initally set to '' as they
     # need to be obtained from the blockchain.
@@ -212,6 +216,10 @@ def main():
                         file_to_verify = decrypted_file
             except zipfile.BadZipFile:
                 file_to_verify = decrypted_file
+            except FileExistsError:
+                print("Unable to proceed. Please move/delete files/folders" +
+                      f" in the zip file {str(decrypted_file)}")
+                sys.exit(1)
         elif (received_content.is_dir() and not args.dec):
             file_to_verify = Path(received_content, 'index.txt')
             if file_to_verify.is_file():

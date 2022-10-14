@@ -135,6 +135,10 @@ def main():
                     file_to_verify = decrypted_file
         except zipfile.BadZipFile:
             file_to_verify = decrypted_file
+        except FileExistsError:
+            print("Unable to proceed. Please move/delete files/folders in" +
+                  f" the zip file {str(decrypted_file)}")
+            sys.exit(1)
 
     if args.hmac:
         filehash = hmac_file(args.hmac.encode(), file_to_verify)
