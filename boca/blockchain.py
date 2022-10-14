@@ -1140,7 +1140,7 @@ def send_memo_bch(key, message, chain):
         except ConnectionError as exc:
             print("Error Exception in send_memo_bch()!", exc)
             sys.exit(1)
-        return {'txid': calc_txid(memo_tx)}
+        return {'txid': calc_txid(memo_tx), 'status': 'added'}
     print("Error: message longer than %d bytes." % BCH_OP_RETURN_LIMIT)
     sys.exit(1)
 
