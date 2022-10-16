@@ -87,15 +87,19 @@ def download_from_ipfs(cid, target=Path.cwd()):
     :type target: ``pathlib.Path``
     :rtype: ``int``
     """
+    download_folder = Path(target)
+    if download_folder.exists() is False:
+        download_folder.mkdir(parents=True, exist_ok=True)
     download_location = Path(target, cid)
+
     try:
         client = connect(IPFS_GATEWAY)
         client.get(cid, target, timeout=DEFAULT_TIMEOUT)
     except IPFSConnectionError:
-        print("Cannot reach local IPFS gateway. Attempting Infura IPFS API.")
+        print("Cannot reach local IPFS gateway. Attempting to download from " +
+              IPFS_URL)
         try:
             response = get(IPFS_URL + str(cid))
-
             totalbits = 0
             if response.status_code == 200:
                 with open(download_location, 'wb') as file_w:
