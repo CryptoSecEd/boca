@@ -106,8 +106,8 @@ def download_from_ipfs(cid, target=Path.cwd()):
                     for chunk in response.iter_content(chunk_size=1024):
                         if chunk:
                             totalbits += 1024
-                            print(len(chunk))
-                            print("Downloaded", totalbits/1024, "KB...")
+                            # print(len(chunk))
+                            # print("Downloaded", totalbits/1024, "KB...")
                             file_w.write(chunk)
         except ConnectTimeout:
             print("Unable to connect to Infura IPFS API. Exiting.")
