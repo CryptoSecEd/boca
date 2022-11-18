@@ -230,7 +230,7 @@ def main():
             else:
                 print("Searching for mutual exchanges ...")
                 pairs_mutual = find_mutual(key.address, args.chain)
-                print(pairs_mutual)
+                # print(pairs_mutual)
                 mutual_key = select_mutual(pairs_mutual)[1]
             enc_filename = enc_file(mutual_key, file_to_encrypt)
             print("File encrypted as %s" % enc_filename)

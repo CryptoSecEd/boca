@@ -36,7 +36,7 @@ DEFAULT_TIMEOUT = 30
 DEBUG = False
 FULLSTACK_LIMIT = 20
 ETHERSCAN_URL_MAINNET = "https://api.etherscan.io"
-ETHERSCAN_URL_TESTNET = "https://api-ropsten.etherscan.io"
+ETHERSCAN_URL_TESTNET = "https://api-goerli.etherscan.io"
 MAX_PRIORITY_FEE_PER_GAS_TEST = 1000000000
 MAX_PRIORITY_FEE_PER_GAS_MAIN = 1000000000
 
@@ -339,15 +339,20 @@ def find_mutual_eth(key_address, chain):
 
     pairs_unique = set()
 
+    print(f"No. txs: {len(transactions)}")
+
     for transaction in transactions:
         addr1 = to_checksum_address(transaction['from'])
         addr2 = to_checksum_address(transaction['to'])
         txid = transaction['hash']
         try:
             sender_pubkey = pub_key_from_tx_eth(txid, chain)
+            # print(f"Senders public key: {sender_pubkey}")
             pairs_unique.add((addr1, sender_pubkey, addr2))
+            # print(pairs_unique)
         except ValueError:
             print(f"Unable to obtain public key from: {txid}")
+            print(f"Transaction: {transaction}")
     # Using a set to remove duplicates, but the returned value is
     # converted to a list.
     pairs_mutual = set()
@@ -859,7 +864,6 @@ def pub_key_from_tx_eth(txid, chain):
     signature = Signature(vrs=vrs)
     tx_dict = {
                'nonce': transaction.nonce,
-               'gasPrice': transaction.gasPrice,
                'gas': transaction.gas,
                'to': transaction.to,
                'value': transaction.value
@@ -867,13 +871,25 @@ def pub_key_from_tx_eth(txid, chain):
     if chain == "ETH":
         tx_dict['chainId'] = "0x01"
     elif chain == "tETH":
-        tx_dict['chainId'] = "0x03"
+        tx_dict['chainId'] = "0x05"
+    # Post-London-Upgrade transactions use these attributes
+    if 'maxPriorityFeePerGas' in transaction and 'maxFeePerGas' in transaction:
+        tx_dict['maxPriorityFeePerGas'] = transaction['maxPriorityFeePerGas']
+        tx_dict['maxFeePerGas'] = transaction['maxFeePerGas']
+    # Pre-London-Upgrade uses 'gasPrice'
+    elif 'gasPrice' in transaction:
+        tx_dict['gasPrice'] = transaction['gasPrice']
     if 'input' in transaction:
         tx_dict['data'] = transaction['input']
+    if 'accessList' in transaction:
+        tx_dict['accessList'] = transaction['accessList']
+
     serialized_tx = serializable_unsigned_transaction_from_dict(tx_dict)
     rec_pub = signature.recover_public_key_from_msg_hash(serialized_tx.hash())
 
     if rec_pub.to_checksum_address() != transaction['from']:
+        print("Mis-match between address from transaction and address from" +
+              "public key.")
         raise ValueError("Unable to obtain public key from transaction: " +
                          f"{txid}")
     # I'm returning the key in this format to be consistent with the BCH
@@ -1231,7 +1247,7 @@ def send_memo_testnet_eth(key, message):
             'maxPriorityFeePerGas': MAX_PRIORITY_FEE_PER_GAS_TEST,
             'maxFeePerGas': base_fee_per_gas + MAX_PRIORITY_FEE_PER_GAS_TEST,
             'nonce': w3test.eth.getTransactionCount(key.address),
-            'chainId': 3,
+            'chainId': 5,
             'data': message.encode('utf-8'),
     }
     txn_dict['gas'] = w3test.eth.estimate_gas(txn_dict)
@@ -1353,7 +1369,7 @@ def spend_testnet_eth(key, address, amount):
             'maxPriorityFeePerGas': MAX_PRIORITY_FEE_PER_GAS_TEST,
             'maxFeePerGas': base_fee_per_gas + MAX_PRIORITY_FEE_PER_GAS_TEST,
             'nonce': w3test.eth.getTransactionCount(key.address),
-            'chainId': 3,
+            'chainId': 5,
     }
     txn_dict['gas'] = w3test.eth.estimate_gas(txn_dict)
     signed_txn = w3test.eth.account.sign_transaction(txn_dict, key.key)
