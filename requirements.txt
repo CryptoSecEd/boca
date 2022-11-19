@@ -5,7 +5,7 @@ eth_account==0.5.9
 eth_keys==0.3.4
 eth_utils==1.10.0
 hexbytes==0.3.0
-ipfshttpclient==0.7.0
+ipfshttpclient==0.8.0a2
 pycryptodomex==3.15.0
 requests==2.28.1
 web3==5.31.1
